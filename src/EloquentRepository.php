@@ -750,10 +750,11 @@ class EloquentRepository implements Repository
 	 * Fill an instance of a model with all known fields.
 	 *
 	 * @param \Illuminate\Database\Eloquent\Model $instance
+	 * @param string $action
 	 * @return mixed
 	 * @todo support more relationship types, such as polymorphic ones!
 	 */
-	final protected function fill(Model $instance)
+	final protected function fill(Model $instance, string $action)
 	{
 		$input            = $this->getInput();
 		$model_fields     = $this->getFields($instance);
@@ -907,7 +908,7 @@ class EloquentRepository implements Repository
 	{
 		$model_class = $this->getModelClass();
 		$instance    = new $model_class;
-		$this->fill($instance);
+		$this->fill($instance, __FUNCTION__);
 
 		return $instance;
 	}
@@ -930,7 +931,7 @@ class EloquentRepository implements Repository
 	final public function update()
 	{
 		$instance = $this->read();
-		$this->fill($instance);
+		$this->fill($instance, __FUNCTION__);
 
 		// Return the updated instance
 		return $this->read();
