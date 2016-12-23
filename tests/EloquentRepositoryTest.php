@@ -9,6 +9,7 @@ use Fuzz\MagicBox\Tests\Models\User;
 use Fuzz\MagicBox\Tests\Models\Post;
 use Fuzz\MagicBox\EloquentRepository;
 use Fuzz\MagicBox\Tests\Models\Profile;
+use Fuzz\MagicBox\Tests\Models\Region;
 use Illuminate\Database\Eloquent\Builder;
 
 class EloquentRepositoryTest extends DBTestCase
