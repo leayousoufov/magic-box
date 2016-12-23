@@ -97,6 +97,12 @@ class EloquentRepository implements Repository
 	const GLUE = '.';
 
 	/**
+	 *
+	 * @var string
+	 */
+	const UPDATE = 'update';
+
+	/**
 	 * Set the model for an instance of this resource controller.
 	 *
 	 * @param string $model_class
