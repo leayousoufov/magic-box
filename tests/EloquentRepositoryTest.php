@@ -832,6 +832,13 @@ class EloquentRepositoryTest extends DBTestCase
 		}
 	}
 
+	public function testItCanCreateModelWithoutIncrementingId()
+	{
+		$region = $this->getRepository('Fuzz\MagicBox\Tests\Models\Region', ['id' => 'US', 'label' => 'United States'])->save();
+		$this->assertNotNull($region);
+		$this->assertEquals($region->id, 'US');
+	}
+
 	public function testItCanAggregateQueryCount()
 	{
 
