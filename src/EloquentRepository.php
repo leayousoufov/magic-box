@@ -765,7 +765,11 @@ class EloquentRepository implements Repository
 
 		$fill_attributes = [];
 
-		foreach (array_except($input, [$instance->getKeyName()]) as $key => $value) {
+		if ($instance->getIncrementing() || $action == self::UPDATE) {
+			$input = array_except($input, [$instance->getKeyName()]);
+		}
+
+		foreach ($input as $key => $value) {
 			if (($relation = $this->isRelation($instance, $key, $instance_model)) && $instance->isFillable($key)) {
 				$relation_type = get_class($relation);
 
