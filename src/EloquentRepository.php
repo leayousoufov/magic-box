@@ -2,10 +2,10 @@
 
 namespace Fuzz\MagicBox;
 
-use Fuzz\MagicBox\Utility\ChecksRelations;
-use Illuminate\Database\Eloquent\Model;
+
 use Fuzz\MagicBox\Contracts\Repository;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,10 +14,33 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use LogicException;
+use ReflectionClass;
+use ReflectionException;
+
 
 class EloquentRepository implements Repository
 {
-	use ChecksRelations;
+	/**
+	 * The key name used in all queries.
+	 *
+	 * @var int
+	 */
+	const KEY_NAME = 'id';
+
+	/**
+	 * The glue for nested strings
+	 *
+	 * @var string
+	 */
+	const GLUE = '.';
+
+	/**
+	 * How many levels deep relationships can be included.
+	 *
+	 * @var int
+	 */
+	protected $depth_restriction = 0;
 
 	/**
 	 * An instance variable specifying the model handled by this repository.
@@ -69,13 +92,6 @@ class EloquentRepository implements Repository
 	private $eager_loads = [];
 
 	/**
-	 * How many levels deep relationships can be included.
-	 *
-	 * @var int
-	 */
-	protected $depth_restriction = 0;
-
-	/**
 	 * Storage for query modifiers.
 	 *
 	 * @var array
@@ -83,239 +99,15 @@ class EloquentRepository implements Repository
 	private $modifiers = [];
 
 	/**
-	 * The key name used in all queries.
+	 * Find an instance of a model by ID.
 	 *
-	 * @var int
-	 */
-	const KEY_NAME = 'id';
-
-	/**
-	 * The glue for nested strings
-	 * 
-	 * @var string
-	 */
-	const GLUE = '.';
-
-	/**
-	 * Set the model for an instance of this resource controller.
+	 * @param int $id
 	 *
-	 * @param string $model_class
-	 * @return static
+	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	public function setModelClass($model_class)
+	public function find($id)
 	{
-		if (! is_subclass_of($model_class, Model::class)) {
-			throw new \InvalidArgumentException('Specified model class must be an instance of ' . Model::class);
-		}
-
-		$this->model_class = $model_class;
-
-		return $this;
-	}
-
-	/**
-	 * Get the model class.
-	 *
-	 * @return string
-	 */
-	public function getModelClass()
-	{
-		return $this->model_class;
-	}
-
-	/**
-	 * Set input manually.
-	 *
-	 * @param array $input
-	 * @return static
-	 */
-	public function setInput(array $input)
-	{
-		$this->input = $input;
-
-		return $this;
-	}
-
-	/**
-	 * Get input.
-	 *
-	 * @return array
-	 */
-	public function getInput()
-	{
-		return $this->input;
-	}
-
-	/**
-	 * Set eager load manually.
-	 *
-	 * @param array $eager_loads
-	 * @return static
-	 */
-	public function setEagerLoads(array $eager_loads)
-	{
-		$this->eager_loads = $eager_loads;
-
-		return $this;
-	}
-
-	/**
-	 * Get eager loads.
-	 *
-	 * @return array
-	 */
-	public function getEagerLoads()
-	{
-		return $this->eager_loads;
-	}
-
-	/**
-	 * Get the eager load depth property.
-	 *
-	 * @return int
-	 */
-	public function getDepthRestriction()
-	{
-		return $this->depth_restriction;
-	}
-
-	/**
-	 * Set the eager load depth property.
-	 * This will limit how deep relationships can be included.
-	 *
-	 * @param int $depth
-	 *
-	 * @return $this
-	 */
-	public function setDepthRestriction($depth)
-	{
-		$this->depth_restriction = $depth;
-
-		return $this;
-	}
-
-	/**
-	 * Set filters manually.
-	 *
-	 * @param array $filters
-	 * @return static
-	 */
-	public function setFilters(array $filters)
-	{
-		$this->filters = $filters;
-
-		return $this;
-	}
-
-	/**
-	 * Get filters.
-	 *
-	 * @return array
-	 */
-	public function getFilters()
-	{
-		return $this->filters;
-	}
-
-	/**
-	 * Get group by.
-	 *
-	 * @return array
-	 */
-	public function getGroupBy()
-	{
-		return $this->group_by;
-	}
-
-	/**
-	 * Set group by manually.
-	 *
-	 * @param array $group_by
-	 *
-	 * @return $this
-	 */
-	public function setGroupBy(array $group_by)
-	{
-		$this->group_by = $group_by;
-
-		return $this;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function getAggregate()
-	{
-		return $this->aggregate;
-	}
-
-	/**
-	 * Set aggregate functions.
-	 *
-	 * @param array $aggregate
-	 *
-	 * @return $this
-	 */
-	public function setAggregate(array $aggregate)
-	{
-		$this->aggregate = $aggregate;
-
-		return $this;
-	}
-
-	/**
-	 * Set sort order manually.
-	 *
-	 * @param array $sort_order
-	 * @return $this
-	 */
-	public function setSortOrder(array $sort_order)
-	{
-		$this->sort_order = $sort_order;
-
-		return $this;
-	}
-
-	/**
-	 * Get sort order.
-	 *
-	 * @return array
-	 */
-	public function getSortOrder()
-	{
-		return $this->sort_order;
-	}
-
-	/**
-	 * Set modifiers.
-	 *
-	 * @param array $modifiers
-	 * @return static
-	 */
-	public function setModifiers(array $modifiers)
-	{
-		$this->modifiers = $modifiers;
-	}
-
-	/**
-	 * Get modifiers.
-	 *
-	 * @return array
-	 */
-	public function getModifiers()
-	{
-		return $this->modifiers;
-	}
-
-	/**
-	 * Return a model's fields.
-	 *
-	 * @param \Illuminate\Database\Eloquent\Model $instance
-	 * @return array
-	 */
-	public static function getFields(Model $instance)
-	{
-		return Schema::getColumnListing($instance->getTable());
+		return $this->query()->find($id);
 	}
 
 	/**
@@ -350,9 +142,38 @@ class EloquentRepository implements Repository
 	}
 
 	/**
+	 * Get the model class.
+	 *
+	 * @return string
+	 */
+	public function getModelClass()
+	{
+		return $this->model_class;
+	}
+
+	/**
+	 * Set the model for an instance of this resource controller.
+	 *
+	 * @param string $model_class
+	 *
+	 * @return static
+	 */
+	public function setModelClass($model_class)
+	{
+		if (! is_subclass_of($model_class, Model::class)) {
+			throw new \InvalidArgumentException('Specified model class must be an instance of ' . Model::class);
+		}
+
+		$this->model_class = $model_class;
+
+		return $this;
+	}
+
+	/**
 	 * Process filter and sort modifications on $query
 	 *
 	 * @param \Illuminate\Database\Eloquent\Builder $query
+	 *
 	 * @return void
 	 */
 	protected function modifyQuery($query)
@@ -432,6 +253,137 @@ class EloquentRepository implements Repository
 	}
 
 	/**
+	 * Get filters.
+	 *
+	 * @return array
+	 */
+	public function getFilters()
+	{
+		return $this->filters;
+	}
+
+	/**
+	 * Set filters manually.
+	 *
+	 * @param array $filters
+	 *
+	 * @return static
+	 */
+	public function setFilters(array $filters)
+	{
+		$this->filters = $filters;
+
+		return $this;
+	}
+
+	/**
+	 * Get sort order.
+	 *
+	 * @return array
+	 */
+	public function getSortOrder()
+	{
+		return $this->sort_order;
+	}
+
+	/**
+	 * Set sort order manually.
+	 *
+	 * @param array $sort_order
+	 *
+	 * @return $this
+	 */
+	public function setSortOrder(array $sort_order)
+	{
+		$this->sort_order = $sort_order;
+
+		return $this;
+	}
+
+	/**
+	 * Get group by.
+	 *
+	 * @return array
+	 */
+	public function getGroupBy()
+	{
+		return $this->group_by;
+	}
+
+	/**
+	 * Set group by manually.
+	 *
+	 * @param array $group_by
+	 *
+	 * @return $this
+	 */
+	public function setGroupBy(array $group_by)
+	{
+		$this->group_by = $group_by;
+
+		return $this;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getAggregate()
+	{
+		return $this->aggregate;
+	}
+
+	/**
+	 * Set aggregate functions.
+	 *
+	 * @param array $aggregate
+	 *
+	 * @return $this
+	 */
+	public function setAggregate(array $aggregate)
+	{
+		$this->aggregate = $aggregate;
+
+		return $this;
+	}
+
+	/**
+	 * Return a model's fields.
+	 *
+	 * @param \Illuminate\Database\Eloquent\Model $instance
+	 *
+	 * @return array
+	 */
+	public static function getFields(Model $instance)
+	{
+		return Schema::getColumnListing($instance->getTable());
+	}
+
+	/**
+	 * Get the eager load depth property.
+	 *
+	 * @return int
+	 */
+	public function getDepthRestriction()
+	{
+		return $this->depth_restriction;
+	}
+
+	/**
+	 * Set the eager load depth property.
+	 * This will limit how deep relationships can be included.
+	 *
+	 * @param int $depth
+	 *
+	 * @return $this
+	 */
+	public function setDepthRestriction($depth)
+	{
+		$this->depth_restriction = $depth;
+
+		return $this;
+	}
+
+	/**
 	 * Apply a sort to a database query
 	 *
 	 * @param \Illuminate\Database\Eloquent\Builder $query
@@ -477,85 +429,6 @@ class EloquentRepository implements Repository
 	}
 
 	/**
-	 * Apply a depth restriction to an exploded dot-nested string (eager load, filter, etc)
-	 *
-	 * @param array $array
-	 * @return array
-	 */
-	protected function applyDepthRestriction(array $array, $offset = 0)
-	{
-		return array_slice($array, 0, $this->getDepthRestriction() + $offset);
-	}
-
-	/**
-	 * "Safe" version of with eager-loading.
-	 *
-	 * Checks if relations exist before loading them.
-	 *
-	 * @param \Illuminate\Database\Eloquent\Builder $query
-	 * @param string|array                          $relations
-	 */
-	protected function safeWith(Builder $query, $relations)
-	{
-		if (is_string($relations)) {
-			$relations = func_get_args();
-			array_shift($relations);
-		}
-
-		$safe_relations = [];
-		// Loop through all relations to check for valid relationship signatures
-		foreach ($relations as $name => $constraints) {
-			// Constraints may be passed in either form:
-			// 2 => 'relation.nested'
-			// or
-			// 'relation.nested' => function() { ... }
-			$constraints_are_name = is_numeric($name);
-			$relation_name        = $constraints_are_name ? $constraints : $name;
-
-			// Expand the dot-notation to see all relations
-			$nested_relations = explode(self::GLUE, $relation_name);
-			$model            = $query->getModel();
-
-			// Don't allow eager loads beyond the eager load depth
-			$nested_relations = $this->applyDepthRestriction($nested_relations);
-
-			// We want to apply the depth restricted relations to the original relations array
-			$cleaned_relation = join(self::GLUE, $nested_relations);
-			if ($cleaned_relation === '') {
-				unset($relations[$name]);
-			} elseif ($constraints_are_name) {
-				$relations[$name] = $cleaned_relation;
-			} else {
-				$relations[$cleaned_relation] = $constraints;
-				unset($relations[$name]);
-			}
-
-			foreach ($nested_relations as $index => $relation) {
-
-				if ($this->isRelation($model, $relation, get_class($model))) {
-					// Iterate through relations if they actually exist
-					$model = $model->$relation()->getRelated();
-				} elseif ($index > 0) {
-					// If we found any valid relations, pass them through
-					$safe_relation = implode(self::GLUE, array_slice($nested_relations, 0, $index));
-					if ($constraints_are_name) {
-						$relations[$name] = $safe_relation;
-					} else {
-						unset($relations[$name]);
-						$relations[$safe_relation] = $constraints;
-					}
-				} else {
-					// If we didn't, remove this relation specification
-					unset($relations[$name]);
-					break;
-				}
-			}
-		}
-
-		$query->with($relations);
-	}
-
-	/**
 	 * Apply nested joins to allow nested sorting for select relationship combinations
 	 *
 	 * @param \Illuminate\Database\Eloquent\Builder $query
@@ -563,6 +436,7 @@ class EloquentRepository implements Repository
 	 * @param \Illuminate\Database\Eloquent\Model   $instance
 	 * @param                                       $field
 	 * @param string                                $direction
+	 *
 	 * @return void
 	 */
 	public function applyNestedJoins(Builder $query, array $relations, Model $instance, $field, $direction = 'asc')
@@ -578,9 +452,9 @@ class EloquentRepository implements Repository
 		$class    = get_class($instance);
 
 		// If the relation exists, determine which type (singular, multiple)
-		if ($this->isRelation($instance, $singular, $class)) {
+		if ($this->isRelation($instance, $singular)) {
 			$related = $instance->$singular();
-		} elseif ($this->isRelation($instance, $relation, $class)) {
+		} elseif ($this->isRelation($instance, $relation)) {
 			$related = $instance->$relation();
 		} else {
 			// This relation does not exist
@@ -642,25 +516,154 @@ class EloquentRepository implements Repository
 	}
 
 	/**
-	 * Find an instance of a model by ID.
+	 * Safely determine if the specified key name is a relation on the model instance
 	 *
-	 * @param int $id
-	 * @return \Illuminate\Database\Eloquent\Model
+	 * @param \Illuminate\Database\Eloquent\Model $instance
+	 * @param                                     $method
+	 *
+	 * @return bool
 	 */
-	final public function find($id)
+	private function isRelation(Model $instance, $method): bool
 	{
-		return $this->query()->find($id);
+		$instanceClass = new ReflectionClass($instance);
+
+		try {
+			$relation = $instanceClass->getMethod($method)->getReturnType();
+		} catch (ReflectionException $err) {
+			return false;
+		}
+
+		if ($relation === null) {
+			throw new LogicException("No return type declared for {$method}. A return type must be declared.");
+		}
+
+		return is_subclass_of($relation->__toString(), Relation::class);
 	}
 
 	/**
-	 * Find an instance of a model by ID, or fail.
+	 * Get eager loads.
 	 *
-	 * @param int $id
-	 * @return \Illuminate\Database\Eloquent\Model
+	 * @return array
 	 */
-	final public function findOrFail($id)
+	public function getEagerLoads()
 	{
-		return $this->query()->findOrFail($id);
+		return $this->eager_loads;
+	}
+
+	/**
+	 * Set eager load manually.
+	 *
+	 * @param array $eager_loads
+	 *
+	 * @return static
+	 */
+	public function setEagerLoads(array $eager_loads)
+	{
+		$this->eager_loads = $eager_loads;
+
+		return $this;
+	}
+
+	/**
+	 * "Safe" version of with eager-loading.
+	 *
+	 * Checks if relations exist before loading them.
+	 *
+	 * @param \Illuminate\Database\Eloquent\Builder $query
+	 * @param string|array                          $relations
+	 */
+	protected function safeWith(Builder $query, $relations)
+	{
+		if (is_string($relations)) {
+			$relations = func_get_args();
+			array_shift($relations);
+		}
+
+		$safe_relations = [];
+		// Loop through all relations to check for valid relationship signatures
+		foreach ($relations as $name => $constraints) {
+			// Constraints may be passed in either form:
+			// 2 => 'relation.nested'
+			// or
+			// 'relation.nested' => function() { ... }
+			$constraints_are_name = is_numeric($name);
+			$relation_name        = $constraints_are_name ? $constraints : $name;
+
+			// Expand the dot-notation to see all relations
+			$nested_relations = explode(self::GLUE, $relation_name);
+			$model            = $query->getModel();
+
+			// Don't allow eager loads beyond the eager load depth
+			$nested_relations = $this->applyDepthRestriction($nested_relations);
+
+			// We want to apply the depth restricted relations to the original relations array
+			$cleaned_relation = join(self::GLUE, $nested_relations);
+			if ($cleaned_relation === '') {
+				unset($relations[$name]);
+			} elseif ($constraints_are_name) {
+				$relations[$name] = $cleaned_relation;
+			} else {
+				$relations[$cleaned_relation] = $constraints;
+				unset($relations[$name]);
+			}
+
+			foreach ($nested_relations as $index => $relation) {
+
+				if ($this->isRelation($model, $relation)) {
+					// Iterate through relations if they actually exist
+					$model = $model->$relation()->getRelated();
+				} elseif ($index > 0) {
+					// If we found any valid relations, pass them through
+					$safe_relation = implode(self::GLUE, array_slice($nested_relations, 0, $index));
+					if ($constraints_are_name) {
+						$relations[$name] = $safe_relation;
+					} else {
+						unset($relations[$name]);
+						$relations[$safe_relation] = $constraints;
+					}
+				} else {
+					// If we didn't, remove this relation specification
+					unset($relations[$name]);
+					break;
+				}
+			}
+		}
+
+		$query->with($relations);
+	}
+
+	/**
+	 * Apply a depth restriction to an exploded dot-nested string (eager load, filter, etc)
+	 *
+	 * @param array $array
+	 *
+	 * @return array
+	 */
+	protected function applyDepthRestriction(array $array, $offset = 0)
+	{
+		return array_slice($array, 0, $this->getDepthRestriction() + $offset);
+	}
+
+	/**
+	 * Get modifiers.
+	 *
+	 * @return array
+	 */
+	public function getModifiers()
+	{
+		return $this->modifiers;
+	}
+
+	/**
+	 * Set modifiers.
+	 *
+	 * @param array $modifiers
+	 *
+	 * @return static
+	 */
+	public function setModifiers(array $modifiers)
+	{
+		$this->modifiers = $modifiers;
 	}
 
 	/**
@@ -668,7 +671,7 @@ class EloquentRepository implements Repository
 	 *
 	 * @return \Illuminate\Database\Eloquent\Collection
 	 */
-	final public function all()
+	public function all()
 	{
 		return $this->query()->get();
 	}
@@ -677,21 +680,12 @@ class EloquentRepository implements Repository
 	 * Return paginated response.
 	 *
 	 * @param  int $per_page
+	 *
 	 * @return \Illuminate\Pagination\Paginator
 	 */
-	final public function paginate($per_page)
+	public function paginate($per_page)
 	{
 		return $this->query()->paginate($per_page);
-	}
-
-	/**
-	 * Count all elements against the base query.
-	 *
-	 * @return int
-	 */
-	final public function count()
-	{
-		return $this->query()->count();
 	}
 
 	/**
@@ -699,9 +693,19 @@ class EloquentRepository implements Repository
 	 *
 	 * @return bool
 	 */
-	final public function hasAny()
+	public function hasAny()
 	{
 		return $this->count() > 0;
+	}
+
+	/**
+	 * Count all elements against the base query.
+	 *
+	 * @return int
+	 */
+	public function count()
+	{
+		return $this->query()->count();
 	}
 
 	/**
@@ -715,39 +719,28 @@ class EloquentRepository implements Repository
 	}
 
 	/**
-	 * Check if the model apparently exists.
+	 * Create a model.
 	 *
-	 * @return bool
+	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	final public function exists()
+	public function create()
 	{
-		return array_key_exists(self::KEY_NAME, $this->getInput());
-	}
+		$model_class = $this->getModelClass();
+		$instance    = new $model_class;
+		$this->fill($instance);
 
-	/**
-	 * Get the primary key from input.
-	 *
-	 * @return mixed
-	 */
-	final public function getInputId()
-	{
-		if (! $this->exists()) {
-			throw new \LogicException('ID is not specified in input.');
-		}
-
-		$input = $this->getInput();
-
-		return $input[self::KEY_NAME];
+		return $instance;
 	}
 
 	/**
 	 * Fill an instance of a model with all known fields.
 	 *
 	 * @param \Illuminate\Database\Eloquent\Model $instance
+	 *
 	 * @return mixed
 	 * @todo support more relationship types, such as polymorphic ones!
 	 */
-	final protected function fill(Model $instance)
+	protected function fill(Model $instance)
 	{
 		$input            = $this->getInput();
 		$model_fields     = $this->getFields($instance);
@@ -759,7 +752,8 @@ class EloquentRepository implements Repository
 		$fill_attributes = [];
 
 		foreach (array_except($input, [$instance->getKeyName()]) as $key => $value) {
-			if (($relation = $this->isRelation($instance, $key, $instance_model)) && $instance->isFillable($key)) {
+			if (($this->isRelation($instance, $key)) && $instance->isFillable($key)) {
+				$relation      = $instance->$key();
 				$relation_type = get_class($relation);
 
 				switch ($relation_type) {
@@ -795,13 +789,38 @@ class EloquentRepository implements Repository
 	}
 
 	/**
+	 * Get input.
+	 *
+	 * @return array
+	 */
+	public function getInput()
+	{
+		return $this->input;
+	}
+
+	/**
+	 * Set input manually.
+	 *
+	 * @param array $input
+	 *
+	 * @return static
+	 */
+	public function setInput(array $input)
+	{
+		$this->input = $input;
+
+		return $this;
+	}
+
+	/**
 	 * Apply relations from an array to an instance model.
 	 *
 	 * @param array                               $specs
 	 * @param \Illuminate\Database\Eloquent\Model $instance
+	 *
 	 * @return void
 	 */
-	final protected function applyRelations(array $specs, Model $instance)
+	protected function applyRelations(array $specs, Model $instance)
 	{
 		foreach ($specs as $spec) {
 			$this->cascadeRelation($spec['relation'], $spec['value'], $instance);
@@ -817,7 +836,7 @@ class EloquentRepository implements Repository
 	 *
 	 * @return void
 	 */
-	final protected function cascadeRelation(Relation $relation, array $input, Model $parent = null)
+	protected function cascadeRelation(Relation $relation, array $input, Model $parent = null)
 	{
 		// Make a child repository for containing the cascaded relationship through saves
 		$target_model_class  = get_class($relation->getQuery()->getModel());
@@ -859,7 +878,7 @@ class EloquentRepository implements Repository
 				// existing child model, delete the old one.
 				$current = $relation->getResults();
 				if (! is_null($current)
-					&& (! isset($input[self::KEY_NAME]) || $current->{self::KEY_NAME} !== intval($input[self::KEY_NAME]))
+				    && (! isset($input[self::KEY_NAME]) || $current->{self::KEY_NAME} !== intval($input[self::KEY_NAME]))
 				) {
 					$relation->delete();
 				}
@@ -893,27 +912,15 @@ class EloquentRepository implements Repository
 	}
 
 	/**
-	 * Create a model.
+	 * Save a model, regardless of whether or not it is "new".
 	 *
 	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	final public function create()
+	public function save()
 	{
-		$model_class = $this->getModelClass();
-		$instance    = new $model_class;
-		$this->fill($instance);
+		$input = $this->getInput();
 
-		return $instance;
-	}
-
-	/**
-	 * Read a model.
-	 *
-	 * @return \Illuminate\Database\Eloquent\Model
-	 */
-	final public function read()
-	{
-		return $this->findOrFail($this->getInputId());
+		return isset($input['id']) ? $this->update() : $this->create();
 	}
 
 	/**
@@ -921,7 +928,7 @@ class EloquentRepository implements Repository
 	 *
 	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	final public function update()
+	public function update()
 	{
 		$instance = $this->read();
 		$this->fill($instance);
@@ -931,26 +938,62 @@ class EloquentRepository implements Repository
 	}
 
 	/**
+	 * Read a model.
+	 *
+	 * @return \Illuminate\Database\Eloquent\Model
+	 */
+	public function read()
+	{
+		return $this->findOrFail($this->getInputId());
+	}
+
+	/**
+	 * Find an instance of a model by ID, or fail.
+	 *
+	 * @param int $id
+	 *
+	 * @return \Illuminate\Database\Eloquent\Model
+	 */
+	public function findOrFail($id)
+	{
+		return $this->query()->findOrFail($id);
+	}
+
+	/**
+	 * Get the primary key from input.
+	 *
+	 * @return mixed
+	 */
+	public function getInputId()
+	{
+		if (! $this->exists()) {
+			throw new \LogicException('ID is not specified in input.');
+		}
+
+		$input = $this->getInput();
+
+		return $input[self::KEY_NAME];
+	}
+
+	/**
+	 * Check if the model apparently exists.
+	 *
+	 * @return bool
+	 */
+	public function exists()
+	{
+		return array_key_exists(self::KEY_NAME, $this->getInput());
+	}
+
+	/**
 	 * Update a model.
 	 *
 	 * @return boolean
 	 */
-	final public function delete()
+	public function delete()
 	{
 		$instance = $this->read();
 
 		return $instance->delete();
-	}
-
-	/**
-	 * Save a model, regardless of whether or not it is "new".
-	 *
-	 * @return \Illuminate\Database\Eloquent\Model
-	 */
-	final public function save()
-	{
-		$input = $this->getInput();
-
-		return isset($input['id']) ? $this->update() : $this->create();
 	}
 }

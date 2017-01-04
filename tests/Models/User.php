@@ -3,6 +3,8 @@
 namespace Fuzz\MagicBox\Tests\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Model
@@ -22,7 +24,7 @@ class User extends Model
 	/**
 	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
 	 */
-	public function posts()
+	public function posts(): HasMany
 	{
 		return $this->hasMany('Fuzz\MagicBox\Tests\Models\Post');
 	}
@@ -30,7 +32,7 @@ class User extends Model
 	/**
 	 * @return \Illuminate\Database\Eloquent\Relations\HasOne
 	 */
-	public function profile()
+	public function profile(): HasOne
 	{
 		return $this->hasOne('Fuzz\MagicBox\Tests\Models\Profile');
 	}

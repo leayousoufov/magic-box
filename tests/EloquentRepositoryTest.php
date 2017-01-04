@@ -10,6 +10,8 @@ use Fuzz\MagicBox\Tests\Models\Post;
 use Fuzz\MagicBox\EloquentRepository;
 use Fuzz\MagicBox\Tests\Models\Profile;
 use Illuminate\Database\Eloquent\Builder;
+use LogicException;
+
 
 class EloquentRepositoryTest extends DBTestCase
 {
@@ -521,6 +523,8 @@ class EloquentRepositoryTest extends DBTestCase
 		];
 
 		$user = $this->getRepository(User::class, $input)->save();
+
+		// Check that nothing was actually changed.
 		$this->assertNotNull($user);
 
 		$input['delete'] = 'doesn\'t matter but this should not be run';
@@ -529,12 +533,45 @@ class EloquentRepositoryTest extends DBTestCase
 		// Since users are soft deletable, if this fails and we run a $user->delete(), magic box will delete the record
 		// but then try to recreate it with the same ID and get a MySQL unique constraint error because the
 		// original ID record exists but is soft deleted
+		$this->expectException(LogicException::class);
+		$this->expectExceptionMessage('No return type declared for delete. A return type must be declared.');
 		$user = $this->getRepository(User::class, $input)->update();
 
 		$database_user = User::find($user->id);
 
 		$this->assertNotNull($database_user);
 		$this->assertNull($user->deleted_at);
+	}
+
+	/**
+	 * Given an input is passed that is not a relationship or a field
+	 * When a save is performed
+	 * Then the input is ignored.
+	 */
+	public function testDoesNotRunInputAsRelationship()
+	{
+		$input = [
+			'username'       => 'javacup@galaxyfarfaraway.com',
+			'name'           => 'Jabba The Hutt',
+			'hands'          => 10,
+			'times_captured' => 0,
+			'not_fillable'   => 'should be null',
+			'occupation'     => 'Being Gross',
+		];
+
+		$user = $this->getRepository(User::class, $input)->save();
+
+		// Check that nothing was actually changed.
+		$this->assertNotNull($user);
+
+		$input['sdliufgsdofuygVKAHDSAODI'] = 'doesn\'t matter but this should not exist on the model.';
+		$input['id'] = $user->id;
+
+		$user = $this->getRepository(User::class, $input)->update();
+
+		$database_user = User::find($user->id);
+
+		$this->assertNotNull($database_user);
 	}
 
 	public function testItCanSetDepthRestriction()
@@ -831,33 +868,34 @@ class EloquentRepositoryTest extends DBTestCase
 		}
 	}
 
-	public function testItCanAggregateQueryCount()
-	{
-
-	}
-
-	public function testItCanAggregateQueryMin()
-	{
-
-	}
-
-	public function testItCanAggregateQueryMax()
-	{
-
-	}
-
-	public function testItCanAggregateQuerySum()
-	{
-
-	}
-
-	public function testItCanAggregateQueryAverage()
-	{
-
-	}
-
-	public function testItCanGroupQuery()
-	{
-
-	}
+	// @TODO we should test these...
+	//public function testItCanAggregateQueryCount()
+	//{
+	//
+	//}
+	//
+	//public function testItCanAggregateQueryMin()
+	//{
+	//
+	//}
+	//
+	//public function testItCanAggregateQueryMax()
+	//{
+	//
+	//}
+	//
+	//public function testItCanAggregateQuerySum()
+	//{
+	//
+	//}
+	//
+	//public function testItCanAggregateQueryAverage()
+	//{
+	//
+	//}
+	//
+	//public function testItCanGroupQuery()
+	//{
+	//
+	//}
 }

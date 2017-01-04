@@ -2,14 +2,26 @@
 
 namespace Fuzz\MagicBox\Contracts;
 
+
 use Illuminate\Database\Eloquent\Model;
+
 
 interface Repository
 {
 	/**
+	 * Return a model's fields.
+	 *
+	 * @param \Illuminate\Database\Eloquent\Model $instance
+	 *
+	 * @return array
+	 */
+	public static function getFields(Model $instance);
+
+	/**
 	 * Set the model for an instance of this resource controller.
 	 *
 	 * @param string $model_class
+	 *
 	 * @return static
 	 */
 	public function setModelClass($model_class);
@@ -25,6 +37,7 @@ interface Repository
 	 * Set input manually.
 	 *
 	 * @param array $input
+	 *
 	 * @return static
 	 */
 	public function setInput(array $input);
@@ -40,6 +53,7 @@ interface Repository
 	 * Set eager load manually.
 	 *
 	 * @param array $eager_loads
+	 *
 	 * @return static
 	 */
 	public function setEagerLoads(array $eager_loads);
@@ -55,6 +69,7 @@ interface Repository
 	 * Set filters manually.
 	 *
 	 * @param array $filters
+	 *
 	 * @return static
 	 */
 	public function setFilters(array $filters);
@@ -70,6 +85,7 @@ interface Repository
 	 * Set modifiers.
 	 *
 	 * @param array $modifiers
+	 *
 	 * @return static
 	 */
 	public function setModifiers(array $modifiers);
@@ -82,17 +98,10 @@ interface Repository
 	public function getModifiers();
 
 	/**
-	 * Return a model's fields.
-	 *
-	 * @param \Illuminate\Database\Eloquent\Model $instance
-	 * @return array
-	 */
-	public static function getFields(Model $instance);
-
-	/**
 	 * Find an instance of a model by ID.
 	 *
 	 * @param int $id
+	 *
 	 * @return \Fuzz\Data\Eloquent\Model
 	 */
 	public function find($id);
@@ -101,6 +110,7 @@ interface Repository
 	 * Find an instance of a model by ID, or fail.
 	 *
 	 * @param int $id
+	 *
 	 * @return \Fuzz\Data\Eloquent\Model
 	 */
 	public function findOrFail($id);
@@ -116,6 +126,7 @@ interface Repository
 	 * Return paginated response.
 	 *
 	 * @param  int $per_page
+	 *
 	 * @return \Illuminate\Pagination\Paginator
 	 */
 	public function paginate($per_page);

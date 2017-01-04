@@ -2,6 +2,7 @@
 
 namespace Fuzz\MagicBox\Contracts;
 
+
 /**
  * Interface Resource
  *

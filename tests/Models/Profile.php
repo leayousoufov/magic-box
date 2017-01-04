@@ -3,6 +3,8 @@
 namespace Fuzz\MagicBox\Tests\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 
 class Profile extends Model
 {
@@ -30,7 +32,7 @@ class Profile extends Model
 	/**
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
 	 */
-	public function user()
+	public function user(): BelongsTo
 	{
 		return $this->belongsTo('Fuzz\MagicBox\Tests\Models\User');
 	}

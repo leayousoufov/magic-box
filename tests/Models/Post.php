@@ -3,6 +3,9 @@
 namespace Fuzz\MagicBox\Tests\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
 
 class Post extends Model
 {
@@ -19,7 +22,7 @@ class Post extends Model
 	/**
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
 	 */
-	public function user()
+	public function user(): BelongsTo
 	{
 		return $this->belongsTo('Fuzz\MagicBox\Tests\Models\User');
 	}
@@ -27,7 +30,7 @@ class Post extends Model
 	/**
 	 * @return $this
 	 */
-	public function tags()
+	public function tags(): BelongsToMany
 	{
 		return $this->belongsToMany('Fuzz\MagicBox\Tests\Models\Tag')->withPivot('extra');
 	}
