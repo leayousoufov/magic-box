@@ -914,49 +914,47 @@ class EloquentRepository implements Repository
 	/**
 	 * Save a model, regardless of whether or not it is "new".
 	 *
+	 * @param string | integer | null $id
+	 *
 	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	public function save()
+	public function save($id = null)
 	{
-		$input = $this->getInput();
+		if ($id || isset($this->getInput()['id'])) {
+			return $this->update($id);
+		}
 
-		return isset($input['id']) ? $this->update() : $this->create();
+		return $this->create();
 	}
 
 	/**
 	 * Update a model.
 	 *
+	 * @param string | integer | null $id
+	 *
 	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	public function update()
+	public function update($id = null)
 	{
-		$instance = $this->read();
+		$instance = $this->read($id);
 		$this->fill($instance);
 
 		// Return the updated instance
-		return $this->read();
+		return $this->read($instance->id);
 	}
 
 	/**
 	 * Read a model.
 	 *
+	 * @param null $id
+	 *
 	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	public function read()
+	public function read($id = null)
 	{
-		return $this->findOrFail($this->getInputId());
-	}
+		$id = $id ?: $this->getInputId();
 
-	/**
-	 * Find an instance of a model by ID, or fail.
-	 *
-	 * @param int $id
-	 *
-	 * @return \Illuminate\Database\Eloquent\Model
-	 */
-	public function findOrFail($id)
-	{
-		return $this->query()->findOrFail($id);
+		return $this->findOrFail($id);
 	}
 
 	/**
@@ -986,13 +984,29 @@ class EloquentRepository implements Repository
 	}
 
 	/**
-	 * Update a model.
+	 * Find an instance of a model by ID, or fail.
 	 *
-	 * @return boolean
+	 * @param int $id
+	 *
+	 * @return \Illuminate\Database\Eloquent\Model
 	 */
-	public function delete()
+	public function findOrFail($id)
 	{
-		$instance = $this->read();
+		return $this->query()->findOrFail($id);
+	}
+
+	/**
+	 * Delete a model.
+	 *
+	 * @param string|integer|null $id
+	 *
+	 * @return bool|null
+	 *
+	 * @throws \Exception
+	 */
+	public function delete($id = null)
+	{
+		$instance = $this->read($id);
 
 		return $instance->delete();
 	}
