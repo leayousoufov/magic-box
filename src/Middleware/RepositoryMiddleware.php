@@ -92,7 +92,7 @@ class RepositoryMiddleware
 		           ->setGroupBy((array) $request->get('group'))
 		           ->setEagerLoads((array) $request->get('include'))
 		           ->setAggregate((array) $request->get('aggregate'))
-		           ->setDepthRestriction(config('magicbox.eager_load_depth'))
+		           ->setDepthRestriction(config('magicbox.default.eager_load_depth'))
 		           ->setInput($input);
 
 		return $repository;
