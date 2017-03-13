@@ -5,6 +5,7 @@ namespace Fuzz\MagicBox;
 
 use Fuzz\MagicBox\Contracts\Repository;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -1009,5 +1010,50 @@ class EloquentRepository implements Repository
 		$instance = $this->read($id);
 
 		return $instance->delete();
+	}
+	/**
+	 * Create many models.
+	 *
+	 * @return Collection
+	 */
+	public function createMany(): Collection
+	{
+		$collection = new Collection();
+
+		foreach ($this->getInput() as $item) {
+			$repository = clone $this;
+			$repository->setInput($item);
+			$collection->add($repository->create());
+		}
+
+		return $collection;
+	}
+
+	/**
+	 * Updates many models.
+	 *
+	 * @return Collection
+	 */
+	public function updateMany(): Collection
+	{
+		$collection = new Collection();
+
+		foreach ($this->getInput() as $item) {
+			$repository = clone $this;
+			$repository->setInput($item);
+			$collection->add($repository->update($repository->getInputId()));
+		}
+
+		return $collection;
+	}
+
+	/**
+	 * Checks if the input has many items.
+	 *
+	 * @return bool
+	 */
+	public function isManyOperation(): bool
+	{
+		return ($this->getInput() && array_keys($this->getInput()) === range(0, count($this->getInput()) - 1));
 	}
 }
