@@ -141,14 +141,6 @@ class EloquentRepositoryTest extends DBTestCase
 		$this->assertNull(User::find(1));
 	}
 
-	/**
-	 * @expectedException \LogicException
-	 */
-	public function testItExpectsInputIds()
-	{
-		$this->getRepository('Fuzz\MagicBox\Tests\Models\User', ['username' => 'joe'])->getInputId();
-	}
-
 	public function testItFillsBelongsToRelations()
 	{
 		$post = $this->getRepository(

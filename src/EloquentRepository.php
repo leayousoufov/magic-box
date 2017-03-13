@@ -965,13 +965,17 @@ class EloquentRepository implements Repository
 	 */
 	public function getInputId()
 	{
-		if (! $this->exists()) {
-			throw new \LogicException('ID is not specified in input.');
-		}
-
 		$input = $this->getInput();
 
-		return $input[self::KEY_NAME];
+		/** @var Model $model */
+		$model = $this->getModelClass();
+
+		// If the model or the input is not set, then we cannot get an id.
+		if (! $model || ! $input) {
+			return null;
+		}
+
+		return array_get($input, (new $model)->getKeyName());
 	}
 
 	/**
